@@ -1,9 +1,11 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+
 import argparse
 import cv2
 import glob
 import matplotlib
 import numpy as np
-import os
 import torch
 
 from depth_anything_v2.dpt import DepthAnythingV2
@@ -12,7 +14,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Depth Anything V2')
     
     parser.add_argument('--dataset_root', type=str, default='/media/user/data1/rcao/STD-CatNovel')
-    parser.add_argument('--output_root', type=str, default='/media/user/data1/rcao/result/depth/depth_anything_relative')
+    parser.add_argument('--output_root', type=str, default='/media/user/data1/rcao/result/depth/std_catnovel/depth_anything_relative')
     parser.add_argument('--input-size', type=int, default=518)
     
     parser.add_argument('--encoder', type=str, default='vitl', choices=['vits', 'vitb', 'vitl', 'vitg'])
@@ -47,8 +49,9 @@ if __name__ == '__main__':
         print(f'Progress {k+1}/{len(filenames)}: {filename}')
         scene_name, image_name = filename.split('/')[-2:]
         raw_image = cv2.imread(filename)
+        image = cv2.resize(raw_image, (640, 360), interpolation=cv2.INTER_LINEAR)
         
-        depth = depth_anything.infer_image(raw_image, args.input_size)
+        depth = depth_anything.infer_image(image, args.input_size)
         
         depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
         depth = depth.astype(np.uint8)
@@ -64,7 +67,7 @@ if __name__ == '__main__':
         if args.pred_only:
             cv2.imwrite(os.path.join(save_path, image_name.replace('_color', '')), depth)
         else:
-            split_region = np.ones((raw_image.shape[0], 50, 3), dtype=np.uint8) * 255
-            combined_result = cv2.hconcat([raw_image, split_region, depth])
+            split_region = np.ones((image.shape[0], 50, 3), dtype=np.uint8) * 255
+            combined_result = cv2.hconcat([image, split_region, depth])
             
             cv2.imwrite(os.path.join(save_path, image_name.replace('_color', '')), combined_result)
